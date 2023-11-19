@@ -4,18 +4,23 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"time"
 )
 
 var k = 128 //kappa
 var s = k + 1
-var signlen = 2 * s
+var signlen = 2*k + 1
 var zero = big.NewInt(0)
 var one = big.NewInt(1)
 var two = big.NewInt(2)
 var lxmax = new(big.Int).Lsh(one, uint(k))         // real value space
-var lxmax1 = new(big.Int).Lsh(one, uint(s))        // max value space
-var lsmax = new(big.Int).Lsh(one, uint(signlen))   // sign flag
-var llmax = new(big.Int).Lsh(one, uint(signlen+1)) // space
+var lxmax1 = new(big.Int).Lsh(one, uint(s))        // max value space, k+1
+var lsmax = new(big.Int).Lsh(one, uint(signlen))   // sign flag, 2k+1
+var llmax = new(big.Int).Lsh(one, uint(signlen+1)) // space, 2k+2
+
+var online time.Duration = 0
+var offline time.Duration = 0
+var total time.Duration = 0
 
 func GeneratePostiveSecret() *big.Int {
 	t, _ := rand.Int(rand.Reader, lxmax)
@@ -95,13 +100,17 @@ func GenerateRandomValueShares() (*big.Int, *big.Int, *big.Int) {
 // [x],[y] ===> [xy]
 func SecMul(x1, y1, x2, y2 *big.Int) (*big.Int, *big.Int) {
 	// offline
+	now := time.Now()
 	a, a1, a2 := GenerateRandomShares()
 	b, b1, b2 := GenerateRandomShares()
 	c := ModMul(a, b)
 	c1 := GenerateFixedSecret()
 	c2 := ModSub(c, c1)
+	end := time.Since(now)
+	offline = offline + end
 
 	//online
+	now = time.Now()
 	e1 := ModSub(x1, a1)
 	f1 := ModSub(y1, b1)
 	e2 := ModSub(x2, a2)
@@ -121,17 +130,28 @@ func SecMul(x1, y1, x2, y2 *big.Int) (*big.Int, *big.Int) {
 	res22 := ModMul(a2, f)
 	res2 := ModAdd(c2, res21)
 	res2 = ModAdd(res2, res22)
+	end = time.Since(now)
+	online = online + end
 	return res1, res2
 }
 
 func SecCmp(x1, y1, x2, y2 *big.Int) int {
+	// offline
+	now := time.Now()
 	_, t1, t2 := GeneratePostiveRandomShares()
 	//fmt.Println("t:", t)
 	diff1 := ModSub(x1, y1)
 	diff2 := ModSub(x2, y2)
+	end := time.Since(now)
+	offline = offline + end
+
+	// online
+	now = time.Now()
 	cx1, cx2 := SecMul(diff1, t1, diff2, t2)
 	cx := ModAdd(cx1, cx2)
 	cx = Normalize(cx)
+	end = time.Since(now)
+	online = online + end
 	if cx.Cmp(zero) == 0 {
 		return 0
 	} else if cx.Cmp(zero) == 1 {
@@ -142,7 +162,7 @@ func SecCmp(x1, y1, x2, y2 *big.Int) int {
 
 func main() {
 	count := 0
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 100000; i++ {
 		x, x1, x2 := GenerateRandomValueShares()
 		y, y1, y2 := GenerateRandomValueShares()
 		x = Normalize(x)
@@ -164,3 +184,35 @@ func main() {
 	}
 	fmt.Println(count)
 }
+
+/*
+func main() {
+	n := 1 << 24
+	x, x1, x2 := GenerateRandomValueShares()
+	y, y1, y2 := GenerateRandomValueShares()
+	x = Normalize(x)
+	//fmt.Println(x)
+	y = Normalize(y)
+	t1 := time.Now()
+	for i := 0; i < n; i++ {
+		SecMul(x1, y1, x2, y2)
+	}
+	end := time.Since(t1)
+	fmt.Println(offline)
+	fmt.Println(online)
+	fmt.Println(end)
+}
+*/
+
+/*
+func main() {
+	x, x1, x2 := GenerateRandomValueShares()
+	y, y1, y2 := GenerateRandomValueShares()
+	xy := ModMul(x, y)
+	res1, res2 := SecMul(x1, y1, x2, y2)
+	res := ModAdd(res1, res2)
+	fmt.Println(xy)
+	fmt.Println(res)
+
+}
+*/
