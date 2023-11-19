@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/rand"
-	"fmt"
 	"math/big"
 	"time"
 )
@@ -100,17 +99,13 @@ func GenerateRandomValueShares() (*big.Int, *big.Int, *big.Int) {
 // [x],[y] ===> [xy]
 func SecMul(x1, y1, x2, y2 *big.Int) (*big.Int, *big.Int) {
 	// offline
-	now := time.Now()
 	a, a1, a2 := GenerateRandomShares()
 	b, b1, b2 := GenerateRandomShares()
 	c := ModMul(a, b)
 	c1 := GenerateFixedSecret()
 	c2 := ModSub(c, c1)
-	end := time.Since(now)
-	offline = offline + end
 
 	//online
-	now = time.Now()
 	e1 := ModSub(x1, a1)
 	f1 := ModSub(y1, b1)
 	e2 := ModSub(x2, a2)
@@ -130,8 +125,6 @@ func SecMul(x1, y1, x2, y2 *big.Int) (*big.Int, *big.Int) {
 	res22 := ModMul(a2, f)
 	res2 := ModAdd(c2, res21)
 	res2 = ModAdd(res2, res22)
-	end = time.Since(now)
-	online = online + end
 	return res1, res2
 }
 
@@ -160,6 +153,7 @@ func SecCmp(x1, y1, x2, y2 *big.Int) int {
 	return -1
 }
 
+
 func main() {
 	count := 0
 	for i := 0; i < 100000; i++ {
@@ -185,9 +179,10 @@ func main() {
 	fmt.Println(count)
 }
 
+
 /*
 func main() {
-	n := 1 << 24
+	n := 1 << 8
 	x, x1, x2 := GenerateRandomValueShares()
 	y, y1, y2 := GenerateRandomValueShares()
 	x = Normalize(x)
@@ -195,7 +190,7 @@ func main() {
 	y = Normalize(y)
 	t1 := time.Now()
 	for i := 0; i < n; i++ {
-		SecMul(x1, y1, x2, y2)
+		SecCmp(x1, y1, x2, y2)
 	}
 	end := time.Since(t1)
 	fmt.Println(offline)
