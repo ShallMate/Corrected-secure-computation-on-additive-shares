@@ -2,20 +2,21 @@ package main
 
 import (
 	"crypto/rand"
+	"fmt"
 	"math/big"
 	"time"
 )
 
 var k = 128 //kappa
 var s = k + 1
-var signlen = 2*k + 1
+var signlen = 2*k + 2
 var zero = big.NewInt(0)
 var one = big.NewInt(1)
 var two = big.NewInt(2)
 var lxmax = new(big.Int).Lsh(one, uint(k))         // real value space
 var lxmax1 = new(big.Int).Lsh(one, uint(s))        // max value space, k+1
-var lsmax = new(big.Int).Lsh(one, uint(signlen))   // sign flag, 2k+1
-var llmax = new(big.Int).Lsh(one, uint(signlen+1)) // space, 2k+2
+var lsmax = new(big.Int).Lsh(one, uint(signlen))   // sign flag, 2k+2
+var llmax = new(big.Int).Lsh(one, uint(signlen+1)) // space, 2k+3
 
 var online time.Duration = 0
 var offline time.Duration = 0
@@ -23,6 +24,11 @@ var total time.Duration = 0
 
 func GeneratePostiveSecret() *big.Int {
 	t, _ := rand.Int(rand.Reader, lxmax)
+	return t
+}
+
+func GeneratePostiveSecret1() *big.Int {
+	t, _ := rand.Int(rand.Reader, lxmax1)
 	return t
 }
 
@@ -83,6 +89,13 @@ func GeneratePostiveRandomShares() (*big.Int, *big.Int, *big.Int) {
 	return x, x1, x2
 }
 
+func GeneratePostiveRandomShares1() (*big.Int, *big.Int, *big.Int) {
+	x := GeneratePostiveSecret1()
+	x1 := GenerateFixedSecret()
+	x2 := ModSub(x, x1)
+	return x, x1, x2
+}
+
 func GenerateRandomValueShares() (*big.Int, *big.Int, *big.Int) {
 	x := GeneratePostiveSecret()
 	r, _ := rand.Int(rand.Reader, two)
@@ -131,7 +144,7 @@ func SecMul(x1, y1, x2, y2 *big.Int) (*big.Int, *big.Int) {
 func SecCmp(x1, y1, x2, y2 *big.Int) int {
 	// offline
 	now := time.Now()
-	_, t1, t2 := GeneratePostiveRandomShares()
+	_, t1, t2 := GeneratePostiveRandomShares1()
 	//fmt.Println("t:", t)
 	diff1 := ModSub(x1, y1)
 	diff2 := ModSub(x2, y2)
@@ -152,7 +165,6 @@ func SecCmp(x1, y1, x2, y2 *big.Int) int {
 	}
 	return -1
 }
-
 
 func main() {
 	count := 0
@@ -178,7 +190,6 @@ func main() {
 	}
 	fmt.Println(count)
 }
-
 
 /*
 func main() {
